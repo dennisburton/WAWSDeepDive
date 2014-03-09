@@ -1,0 +1,15 @@
+{
+  "name": "WAWSDeepDive",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Dennis Burton",
+  "license": "MIT",
+  "devDependencies": {
+    "gulp-htmlmin": "~0.1.2",
+    "gulp": "~3.5.5"
+  }
+}
