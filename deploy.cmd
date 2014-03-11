@@ -47,6 +47,23 @@ IF NOT DEFINED KUDU_SYNC_CMD (
   :: Locally just running "kuduSync" would also work
   SET KUDU_SYNC_CMD=%appdata%\npm\kuduSync.cmd
 )
+IF NOT DEFINED DEPLOYMENT_TEMP (
+  SET DEPLOYMENT_TEMP=%temp%\___deployTemp%random%
+  SET CLEAN_LOCAL_DEPLOYMENT_TEMP=false
+)
+
+IF DEFINED CLEAN_LOCAL_DEPLOYMENT_TEMP (
+  IF EXIST "%DEPLOYMENT_TEMP%" rd /s /q "%DEPLOYMENT_TEMP%"
+  mkdir "%DEPLOYMENT_TEMP%"
+)
+
+IF NOT DEFINED MSBUILD_PATH (
+  SET MSBUILD_PATH=%WINDIR%\Microsoft.NET\Framework\v4.0.30319\msbuild.exe
+)
+ IF NOT DEFINED NUGET_EXE (
+   SET NUGET_EXE=c:\Chocolatey\lib\NuGet.CommandLine.2.5.0\tools\nuget.exe
+ )
+
 goto Deployment
 
 :: Utility Functions
@@ -85,29 +102,62 @@ goto :EOF
 :: Deployment
 :: ----------
 :Deployment
-echo Handling Basic Web Site deployment.
-:: 2. Select node version
+echo Handling Web Site deployment.
+
+echo "Nuget Restore"
+echo "NuGet_Exe: %NUGET_EXE%"
+:: 1. Restore NuGet packages
+IF /I "WAWSDeepDive.sln" NEQ "" (
+  :ExecuteCmd "%NUGET_EXE%" restore "%DEPLOYMENT_SOURCE%\WAWSDeepDive.sln"
+  IF !ERRORLEVEL! NEQ 0 goto error
+)
+
+echo "MSBuild"
+echo "MsBuild_Path: %MSBUILD_PATH%"
+:: 2. Build to the temporary path
+IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
+  :ExecuteCmd "%MSBUILD_PATH%" "%DEPLOYMENT_SOURCE%\API" /nologo /verbosity:m /t:Build /t:pipelinePreDeployCopyAllFilesToOneFolder /p:_PackageTempDir="%DEPLOYMENT_TEMP%";AutoParameterizationWebConfigConnectionStrings=false;Configuration=Release /p:SolutionDir="%DEPLOYMENT_SOURCE%\" %SCM_BUILD_ARGS%
+  echo "msbuild completed"
+) ELSE (
+  :ExecuteCmd "%MSBUILD_PATH%" "%DEPLOYMENT_SOURCE%\API" /nologo /verbosity:m /t:Build /p:AutoParameterizationWebConfigConnectionStrings=false;Configuration=Release /p:SolutionDir="%DEPLOYMENT_SOURCE%\.\\" %SCM_BUILD_ARGS%
+  echo "msbuild completed"
+)
+IF !ERRORLEVEL! NEQ 0 goto error
+:: 1. Select node version
 call :SelectNodeVersion
 
 pushd Web
-:: 3. Install npm packages
+
+echo "NPM install"
+:: 2. Install npm packages
 IF EXIST "package.json" (
-  call :ExecuteCmd !NPM_CMD! install
+  :ExecuteCmd !NPM_CMD! install
   IF !ERRORLEVEL! NEQ 0 goto error
 )
 
+echo "Execute Gulp"
 IF EXIST "Gulpfile.js" (
   call .\node_modules\.bin\gulp minify
+  echo "gulp done"
   IF !ERRORLEVEL! NEQ 0 goto error
 )
 
-popd
-:: 1. KuduSync
+popd echo "Kudu Sync Web"
+echo "Deployment temp: %DEPLOYMENT_TEMP%"
+echo "Deployment target: %DEPLOYMENT_TARGET%"
+:: 3. KuduSync Web
 IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
-  call :ExecuteCmd "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_SOURCE%\Web\dist" -t "%DEPLOYMENT_TARGET%" -n "%NEXT_MANIFEST_PATH%" -p "%PREVIOUS_MANIFEST_PATH%" -i ".git;.hg;.deployment;deploy.cmd"
+  echo "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_SOURCE%\Web\dist" -t "%DEPLOYMENT_TEMP%" -n "%DEPLOYMENT_SOURCE%\Web\generated\manifest" -p "%DEPLOYMENT_SOURCE%\Web\generated\manifest" -i ".git;.hg;.deployment;deploy.cmd"
+  :ExecuteCmd "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_SOURCE%\Web\dist" -t "%DEPLOYMENT_TEMP%" -n "%DEPLOYMENT_SOURCE%\Web\generated\manifest" -p "%DEPLOYMENT_SOURCE%\Web\generated\manifest" -i ".git;.hg;.deployment;deploy.cmd"
   IF !ERRORLEVEL! NEQ 0 goto error
 )
 
+::echo "Kudu Sync API"
+:: 3. KuduSync API
+::IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
+::  :ExecuteCmd "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_TEMP%" -t "%DEPLOYMENT_TARGET%" -n "%NEXT_MANIFEST_PATH%" -p "%PREVIOUS_MANIFEST_PATH%" -i ".git;.hg;.deployment;deploy.cmd"
+::  IF !ERRORLEVEL! NEQ 0 goto error
+::)
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: Post deployment stub
