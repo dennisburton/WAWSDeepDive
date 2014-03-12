@@ -121,7 +121,6 @@ IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
   "%MSBUILD_PATH%" "%DEPLOYMENT_SOURCE%\API\API.csproj" /nologo /verbosity:m /t:Build /p:AutoParameterizationWebConfigConnectionStrings=false;Configuration=Release /p:SolutionDir="%DEPLOYMENT_SOURCE%\" %SCM_BUILD_ARGS%
 )
 echo "msbuild completed"
-pause
 IF !ERRORLEVEL! NEQ 0 goto error
 :: 1. Select node version
 call :SelectNodeVersion
