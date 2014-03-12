@@ -108,7 +108,7 @@ echo "Nuget Restore"
 echo "NuGet_Exe: %NUGET_EXE%"
 :: 1. Restore NuGet packages
 IF /I "WAWSDeepDive.sln" NEQ "" (
-  :ExecuteCmd "%NUGET_EXE%" restore "%DEPLOYMENT_SOURCE%\WAWSDeepDive.sln"
+  call :ExecuteCmd "%NUGET_EXE%" restore "%DEPLOYMENT_SOURCE%\WAWSDeepDive.sln"
   IF !ERRORLEVEL! NEQ 0 goto error
 )
 
@@ -116,12 +116,12 @@ echo "MSBuild"
 echo "MsBuild_Path: %MSBUILD_PATH%"
 :: 2. Build to the temporary path
 IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
-  :ExecuteCmd "%MSBUILD_PATH%" "%DEPLOYMENT_SOURCE%\API" /nologo /verbosity:m /t:Build /t:pipelinePreDeployCopyAllFilesToOneFolder /p:_PackageTempDir="%DEPLOYMENT_TEMP%";AutoParameterizationWebConfigConnectionStrings=false;Configuration=Release /p:SolutionDir="%DEPLOYMENT_SOURCE%\" %SCM_BUILD_ARGS%
-  echo "msbuild completed"
+  "%MSBUILD_PATH%" "%DEPLOYMENT_SOURCE%\API\API.csproj" /nologo /verbosity:m /t:Build /t:pipelinePreDeployCopyAllFilesToOneFolder /p:_PackageTempDir="%DEPLOYMENT_TEMP%";AutoParameterizationWebConfigConnectionStrings=false;Configuration=Release /p:SolutionDir="%DEPLOYMENT_SOURCE%\" %SCM_BUILD_ARGS%
 ) ELSE (
-  :ExecuteCmd "%MSBUILD_PATH%" "%DEPLOYMENT_SOURCE%\API" /nologo /verbosity:m /t:Build /p:AutoParameterizationWebConfigConnectionStrings=false;Configuration=Release /p:SolutionDir="%DEPLOYMENT_SOURCE%\.\\" %SCM_BUILD_ARGS%
-  echo "msbuild completed"
+  "%MSBUILD_PATH%" "%DEPLOYMENT_SOURCE%\API\API.csproj" /nologo /verbosity:m /t:Build /p:AutoParameterizationWebConfigConnectionStrings=false;Configuration=Release /p:SolutionDir="%DEPLOYMENT_SOURCE%\" %SCM_BUILD_ARGS%
 )
+echo "msbuild completed"
+pause
 IF !ERRORLEVEL! NEQ 0 goto error
 :: 1. Select node version
 call :SelectNodeVersion
@@ -143,21 +143,21 @@ IF EXIST "Gulpfile.js" (
 )
 
 popd echo "Kudu Sync Web"
+echo "Deployment source: %DEPLOYMENT_SOURCE%"
 echo "Deployment temp: %DEPLOYMENT_TEMP%"
 echo "Deployment target: %DEPLOYMENT_TARGET%"
 :: 3. KuduSync Web
 IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
-  echo "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_SOURCE%\Web\dist" -t "%DEPLOYMENT_TEMP%" -n "%DEPLOYMENT_SOURCE%\Web\generated\manifest" -p "%DEPLOYMENT_SOURCE%\Web\generated\manifest" -i ".git;.hg;.deployment;deploy.cmd"
-  :ExecuteCmd "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_SOURCE%\Web\dist" -t "%DEPLOYMENT_TEMP%" -n "%DEPLOYMENT_SOURCE%\Web\generated\manifest" -p "%DEPLOYMENT_SOURCE%\Web\generated\manifest" -i ".git;.hg;.deployment;deploy.cmd"
+  call :ExecuteCmd "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_SOURCE%\Web\dist" -t "%DEPLOYMENT_TEMP%" -n "%DEPLOYMENT_SOURCE%\Web\generated\manifest" -p "%DEPLOYMENT_SOURCE%\Web\generated\manifest" -i ".git;.hg;.deployment;deploy.cmd"
   IF !ERRORLEVEL! NEQ 0 goto error
 )
 
-::echo "Kudu Sync API"
+echo "Kudu Sync API"
 :: 3. KuduSync API
-::IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
-::  :ExecuteCmd "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_TEMP%" -t "%DEPLOYMENT_TARGET%" -n "%NEXT_MANIFEST_PATH%" -p "%PREVIOUS_MANIFEST_PATH%" -i ".git;.hg;.deployment;deploy.cmd"
-::  IF !ERRORLEVEL! NEQ 0 goto error
-::)
+IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
+  call :ExecuteCmd "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_TEMP%" -t "%DEPLOYMENT_TARGET%" -n "%NEXT_MANIFEST_PATH%" -p "%PREVIOUS_MANIFEST_PATH%" -i ".git;.hg;.deployment;deploy.cmd"
+  IF !ERRORLEVEL! NEQ 0 goto error
+)
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: Post deployment stub
