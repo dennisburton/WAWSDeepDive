@@ -61,7 +61,7 @@ IF NOT DEFINED MSBUILD_PATH (
   SET MSBUILD_PATH=%WINDIR%\Microsoft.NET\Framework\v4.0.30319\msbuild.exe
 )
  IF NOT DEFINED NUGET_EXE (
-   SET NUGET_EXE=c:\Chocolatey\lib\NuGet.CommandLine.2.5.0\tools\nuget.exe
+   SET NUGET_EXE=c:\Chocolatey\lib\NuGet.CommandLine.2.8.0\tools\nuget.exe
  )
 
 goto Deployment
@@ -108,7 +108,8 @@ echo "Nuget Restore"
 echo "NuGet_Exe: %NUGET_EXE%"
 :: 1. Restore NuGet packages
 IF /I "WAWSDeepDive.sln" NEQ "" (
-  call :ExecuteCmd "%NUGET_EXE%" restore "%DEPLOYMENT_SOURCE%\WAWSDeepDive.sln"
+  echo "%NUGET_EXE%" restore "%DEPLOYMENT_SOURCE%\WAWSDeepDive.sln"
+  "%NUGET_EXE%" restore "%DEPLOYMENT_SOURCE%\WAWSDeepDive.sln"
   IF !ERRORLEVEL! NEQ 0 goto error
 )
 
