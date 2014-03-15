@@ -121,6 +121,17 @@ IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
 ) ELSE (
   "%MSBUILD_PATH%" "%DEPLOYMENT_SOURCE%\API\API.csproj" /nologo /verbosity:m /t:Build /p:AutoParameterizationWebConfigConnectionStrings=false;Configuration=Release /p:SolutionDir="%DEPLOYMENT_SOURCE%\" %SCM_BUILD_ARGS%
 )
+
+:: 2. Build to the temporary path
+"%MSBUILD_PATH%" "%DEPLOYMENT_SOURCE%\WebJob\WebJob.csproj" /nologo /verbosity:m /t:Build /p:Configuration=Release;OutputPath="%DEPLOYMENT_TEMP%\app_data\jobs\continuous\deployedJob" /p:SolutionDir="%DEPLOYMENT_SOURCE%\.\\" %SCM_BUILD_ARGS%
+IF !ERRORLEVEL! NEQ 0 goto error
+
+:: 3. Run web job deploy script
+IF DEFINED WEB_JOB_DEPLOY_CMD (
+  call :ExecuteCmd "%WEB_JOB_DEPLOY_CMD%"
+)
+
+
 echo "msbuild completed"
 IF !ERRORLEVEL! NEQ 0 goto error
 :: 1. Select node version
