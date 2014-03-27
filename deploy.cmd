@@ -154,7 +154,8 @@ IF EXIST "Gulpfile.js" (
   IF !ERRORLEVEL! NEQ 0 goto error
 )
 
-popd echo "Kudu Sync Web"
+popd 
+echo "Kudu Sync Web"
 echo "Deployment source: %DEPLOYMENT_SOURCE%"
 echo "Deployment temp: %DEPLOYMENT_TEMP%"
 echo "Deployment target: %DEPLOYMENT_TARGET%"
